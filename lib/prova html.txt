@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Avaliação - Versionamento e Mensageria</title>
+<style>
+    :root { --bg: #0f172a; --card: #1e293b; --certo: #22c55e; --errado: #ef4444; --roxo: #a855f7; }
+    * { box-sizing: border-box; font-family: 'Segoe UI'; }
+    body { background: var(--bg); color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: white; }
+ .container { max-width: 950px; margin: 0 auto; background: var(--card); padding: 25px; border-radius: 16px; }
+ .timer { text-align: right; font-size: 1.2rem; font-weight: bold; color: var(--roxo); }
+ .dados-aluno { display: flex; gap: 15px; margin-bottom: 20px; }
+ .dados-aluno input { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; }
+ .questao { background: #0f172a; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid var(--roxo); }
+ .tag { font-size: 0.8rem; background: #334155; padding: 3px 8px; border-radius: 6px; margin-right: 5px; }
+ .opcao { display: flex; align-items: center; gap: 10px; padding: 10px; margin: 5px 0; background: #1e293b; border-radius: 8px; cursor: pointer; }
+ .opcao:hover { background: #334155; }
+    textarea { width: 100%; min-height: 120px; background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; padding: 10px; }
+    button { background: var(--roxo); color: white; border: none; padding: 14px 24px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 10px 5px 0 0; }
+    button.secundario { background: #334155; }
+ .resultado { display: none; }
+ .placar { font-size: 2.5rem; text-align: center; margin: 20px 0; }
+ .acerto { color: var(--certo); }.erro { color: var(--errado); }
+ .feedback { padding: 10px; border-radius: 8px; margin: 5px 0; font-size: 0.9rem; }
+ .feedback.certo { background: rgba(34,197,94,0.2); border-left: 4px solid var(--certo); }
+ .feedback.errado { background: rgba(239,68,68,0.2); border-left: 4px solid var(--errado); }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📦 Avaliação - Versionamento de Código e Mensageria</h1>
+    <div class="timer">Tempo: <span id="tempo">90:00</span></div>
+
+    <form id="formAvaliacao">
+        <div class="dados-aluno">
+            <input type="text" name="nome" placeholder="Nome do Aluno" required>
+            <input type="text" name="turma" placeholder="Turma: 2A" required>
+        </div>
+
+        <div id="questoes-objetivas"></div>
+
+        <div class="questao">
+            <h3>33. Explique como funciona o fluxo de Branch > Merge > Conflito e como resolvemos no laboratório</h3>
+            <textarea name="q33" required></textarea>
+        </div>
+
+        <div class="questao">
+            <h3>34. Explique a diferença entre Fila e Tópico no RabbitMQ e cite 1 exemplo de uso de cada um</h3>
+            <textarea name="q34" required></textarea>
+        </div>
+
+        <button type="submit">Enviar e Gerar Relatório</button>
+    </form>
+
+    <div class="resultado" id="resultado">
+        <h2>✅ Avaliação Enviada</h2>
+        <div class="placar" id="placar"></div>
+        <button onclick="exportarCSV()">📥 Baixar CSV da Turma</button>
+        <button class="secundario" onclick="location.reload()">Nova Avaliação</button>
+        <div id="feedback-geral"></div>
+    </div>
+</div>
+
+<script>
+const questoes = [
+    // BLOCO 1: GIT BASICO E INICIALIZACAO - 8
+    {q: "Qual comando inicializa um repositório Git vazio?", op: ["git start","git init","git new","git create"], r: 1, tag:"Git"},
+    {q: "Para que serve `git add.`?", op: ["Fazer commit","Adicionar todos arquivos modificados para o Stage","Ver status","Clonar repo"], r: 1, tag:"Git"},
+    {q: "O que `git commit -m 'mensagem'` faz?", op: ["Salva as alterações do Stage no histórico","Envia para GitHub","Cria branch","Apaga arquivos"], r: 0, tag:"Git"},
+    {q: "Qual comando mostra todos os commits de forma resumida?", op: ["git log --oneline","git history","git commits","git show"], r: 0, tag:"Git"},
+    {q: "O que significa `HEAD` no Git?", op: ["O primeiro commit","O commit atual em que estamos","O último branch","O repositório remoto"], r: 1, tag:"Git"},
+    {q: "Para clonar um repositório remoto usamos:", op: ["git clone <url>","git pull <url>","git fetch <url>","git copy <url>"], r: 0, tag:"Git"},
+    {q: "Qual comando desfaz alterações em um arquivo que ainda não foi commitado?", op: ["git delete","git reset","git restore <arquivo>","git undo"], r: 2, tag:"Git"},
+    {q: "O que o arquivo.gitignore faz?", op: ["Ignora commits","Define arquivos/pastas que o Git deve ignorar","Apaga arquivos","Cria backup"], r: 1, tag:"Git"},
+
+    // BLOCO 2: BRANCH, MERGE E CONFLITO - 8
+    {q: "Para que serve uma Branch no Git?", op: ["Fazer backup","Trabalhar em uma funcionalidade isolada","Apagar código","Acelerar o código"], r: 1, tag:"Branch"},
+    {q: "Qual comando cria e já troca para uma nova branch?", op: ["git branch nova","git checkout nova","git switch -c nova","git new nova"], r: 2, tag:"Branch"},
+    {q: "Qual comando junta uma branch na main?", op: ["git merge <branch>","git join <branch>","git add <branch>","git commit <branch>"], r: 0, tag:"Branch"},
+    {q: "O que é um 'Conflito de Merge'?", op: ["Quando 2 pessoas alteram a mesma linha do mesmo arquivo","Quando o código quebra","Quando falta internet","Quando deleta um arquivo"], r: 0, tag:"Branch"},
+    {q: "Após resolver um conflito, qual o próximo passo?", op: ["git push","git add <arquivo> e git commit","git clone","git pull"], r: 1, tag:"Branch"},
+    {q: "Qual comando lista todas as branches locais?", op: ["git list","git branches","git branch","git show branch"], r: 2, tag:"Branch"},
+    {q: "A branch `main` ou `master` é considerada:", op: ["Branch de teste","Branch principal de produção","Branch temporária","Branch de bug"], r: 1, tag:"Branch"},
+    {q: "No nosso lab de 2 devs, por que deu conflito?", op: ["Porque apagamos o arquivo","Porque ambos alteraram a mesma linha do calculo_dosagem.js","Porque faltou commit","Porque usamos GitHub"], r: 1, tag:"Branch"},
+
+    // BLOCO 3: CONVENTIONAL COMMITS E BOAS PRATICAS - 8
+    {q: "O que significa o prefixo `feat:` em um commit?", op: ["Correção de bug","Nova funcionalidade","Documentação","Refatoração"], r: 1, tag:"Commits"},
+    {q: "O que significa o prefixo `fix:` em um commit?", op: ["Nova funcionalidade","Correção de bug","Estilo","Teste"], r: 1, tag:"Commits"},
+    {q: "O que significa o prefixo `docs:` em um commit?", op: ["Mudança de código","Mudança só na documentação","Performance","Build"], r: 1, tag:"Commits"},
+    {q: "Qual a vantagem de usar Conventional Commits?", op: ["Deixa o código mais rápido","Padroniza histórico e gera changelog automático","Apaga commits antigos","Faz merge sozinho"], r: 1, tag:"Commits"},
+    {q: "Exemplo de commit correto:", op: ["update","arrumei o bug","fix: corrige calculo de dosagem","commit 1"], r: 2, tag:"Commits"},
+    {q: "O que é `refactor:`?", op: ["Nova feature","Correção","Reestruturação do código sem mudar funcionalidade","Deletar código"], r: 2, tag:"Commits"},
+    {q: "O que é `chore:`?", op: ["Tarefa de manutenção, build, dependências","Bug","Feature","Documentação"], r: 0, tag:"Commits"},
+    {q: "No nosso lab de 'Relatório de Incidente', qual foi o último commit?", op: ["feat: implementa","update: ajuste","delete: remove","fix: reverte alterações incorretas e restaura layout"], r: 3, tag:"Commits"},
+
+    // BLOCO 4: MENSAGERIA E RABBITMQ - 8
+    {q: "O que é Mensageria?", op: ["Enviar email","Padrão para sistemas se comunicarem de forma assíncrona via filas","Banco de dados","API REST"], r: 1, tag:"Mensageria"},
+    {q: "No RabbitMQ, quem ENVIA a mensagem para a fila?", op: ["Consumer","Publisher","Broker","Queue"], r: 1, tag:"Mensageria"},
+    {q: "No RabbitMQ, quem RECEBE e PROCESSA a mensagem?", op: ["Publisher","Consumer","Exchange","Routing Key"], r: 1, tag:"Mensageria"},
+    {q: "Para que serve uma Fila no RabbitMQ?", op: ["Guardar mensagens até o consumidor processar","Guardar imagens","Fazer login","Cache"], r: 0, tag:"Mensageria"},
+    {q: "Qual a vantagem de usar mensageria?", op: ["Deixa o site mais bonito","Desacopla sistemas e evita perda de dados se um cair","Apaga dados","Faz commit"], r: 1, tag:"Mensageria"},
+    {q: "O que é um 'Tópico' ou 'Exchange do tipo topic'?", op: ["1 para 1","1 para N, roteia mensagem por padrão","Apaga mensagem","Cria branch"], r: 1, tag:"Mensageria"},
+    {q: "Exemplo de uso de Fila:", op: ["Chat em tempo real","Envio de email de boas vindas após cadastro","Video chamada","Banco de dados"], r: 1, tag:"Mensageria"},
+    {q: "Exemplo de uso de Tópico:", op: ["Processar pagamento","Notificar todos os serviços sobre 'novo_pedido'","Salvar no banco","Fazer backup"], r: 1, tag:"Mensageria"}
+];
+
+// GERAR QUESTOES
+const divQuestoes = document.getElementById('questoes-objetivas');
+questoes.forEach((questao, i)=>{
+    let html = `<div class="questao"><span class="tag">${questao.tag}</span><h3>${i+1}. ${questao.q}</h3>`;
+    questao.op.forEach((op, j)=>{
+        html += `<label class="opcao"><input type="radio" name="q${i}" value="${j}" required> ${op}</label>`;
+    });
+    html += `</div>`;
+    divQuestoes.innerHTML += html;
+});
+
+// TIMER
+let tempo = 90*60;
+setInterval(()=>{ if(tempo > 0) tempo--; }, 1000);
+
+// BANCO DE DADOS LOCAL
+let bancoDeNotas = JSON.parse(localStorage.getItem('notasVersionamento')) || [];
+
+document.getElementById('formAvaliacao').addEventListener('submit', e=>{
+    e.preventDefault();
+    const dados = new FormData(e.target);
+    let acertos = 0; let feedback = ''; let respostas = [];
+
+    questoes.forEach((questao, i)=>{
+        let resposta = parseInt(dados.get('q'+i));
+        respostas.push(questao.op[resposta] || 'Em branco');
+        if(resposta === questao.r){ acertos++; feedback += `<div class="feedback certo">Q${i+1}: ✅ Acertou [${questao.tag}]</div>`; }
+        else { feedback += `<div class="feedback errado">Q${i+1}: ❌ Errou [${questao.tag}]. Certa: ${questao.op[questao.r]}</div>`; }
+    });
+
+    let nota = ((acertos/32)*10).toFixed(1);
+    let tempoGasto = 90*60 - tempo;
+
+    const aluno = {
+        data: new Date().toLocaleString('pt-BR'),
+        nome: dados.get('nome'),
+        turma: dados.get('turma'),
+        nota: nota,
+        acertos: acertos,
+        tempo: `${Math.floor(tempoGasto/60)}m ${tempoGasto%60}s`,
+      ...Object.fromEntries(respostas.map((r,i)=>[`Q${i+1}`, r])),
+        D33: dados.get('q33'), D34: dados.get('q34')
+    };
+    bancoDeNotas.push(aluno);
+    localStorage.setItem('notasVersionamento', JSON.stringify(bancoDeNotas));
+
+    document.getElementById('formAvaliacao').style.display = 'none';
+    document.getElementById('resultado').style.display = 'block';
+    document.getElementById('placar').innerHTML = `Aluno: ${aluno.nome}<br>Nota: <span class="acerto">${nota}</span> / 10.0<br>Acertos: ${acertos}/32`;
+    document.getElementById('feedback-geral').innerHTML = feedback;
+});
+
+// EXPORTAR CSV
+function exportarCSV(){
+    if(bancoDeNotas.length === 0) return alert('Nenhuma avaliação salva ainda!');
+
+    let headers = ['Data','Nome','Turma','Nota','Acertos','Tempo'];
+    questoes.forEach((_,i)=> headers.push(`Q${i+1}`));
+    headers.push('D33','D34');
+
+    let csv = [headers.join(';')];
+    bancoDeNotas.forEach(aluno=>{
+        let linha = headers.map(h => `"${aluno[h] || ''}"`);
+        csv.push(linha.join(';'));
+    });
+
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Notas_Versionamento_${new Date().toLocaleDateString('pt-BR')}.csv`;
+    link.click();
+}
+</script>
+</body>
+</html>
